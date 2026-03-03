@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creet Agent Dashboard - Preview</title>
+  <style>
+    :root {
+      --creet-pink: #ff3b8b;
+      --creet-blue: #3b82f6;
+      --creet-navy: #0f172a;
+      --creet-green: #22c55e;
+      --creet-red: #ef4444;
+      --creet-yellow: #eab308;
+      --creet-gray: #64748b;
+      --bg: #0e0e12;
+      --fg: #e2e8f0;
+      --border: #1e293b;
+      --card-bg: #12121a;
+      --subtle: #94a3b8;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      z-index: 9999;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--creet-pink), var(--creet-blue), var(--creet-navy));
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-text {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .logo-text .pink { color: var(--creet-pink); }
+    .logo-text .blue { color: var(--creet-blue); }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--creet-red);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--creet-red);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .live-badge.idle { background: rgba(100,116,139,0.15); color: var(--creet-gray); }
+    .live-badge.idle .live-dot { background: var(--creet-gray); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .session-info {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+      color: var(--subtle);
+      font-size: 11px;
+    }
+
+    .progress-section {
+      margin-bottom: 16px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--creet-pink), var(--creet-blue));
+      border-radius: 2px;
+      transition: width 0.5s ease;
+      position: relative;
+    }
+
+    .progress-bar-fill::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 11px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .stat-dot.running { background: var(--creet-blue); }
+    .stat-dot.done { background: var(--creet-green); }
+    .stat-dot.pending { background: var(--creet-yellow); }
+    .stat-dot.error { background: var(--creet-red); }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .agent-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, opacity 0.3s;
+      animation: card-enter 0.3s ease-out;
+    }
+
+    .agent-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      border-radius: 3px 0 0 3px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .agent-card.running { border-color: rgba(59,130,246,0.3); }
+    .agent-card.running::before {
+      background: var(--creet-blue);
+      box-shadow: 0 0 8px var(--creet-blue);
+      animation: edge-pulse 2s ease-in-out infinite;
+    }
+
+    .agent-card.done { opacity: 0.75; }
+    .agent-card.done::before { background: var(--creet-green); }
+
+    .agent-card.pending { opacity: 0.6; }
+    .agent-card.pending::before { background: var(--creet-yellow); }
+
+    .agent-card.error { border-color: rgba(239,68,68,0.3); }
+    .agent-card.error::before { background: var(--creet-red); }
+
+    @keyframes edge-pulse {
+      0%, 100% { box-shadow: 0 0 4px var(--creet-blue); }
+      50% { box-shadow: 0 0 12px var(--creet-blue); }
+    }
+
+    @keyframes card-enter {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .agent-name {
+      font-weight: 600;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70%;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-badge.running { background: rgba(59,130,246,0.2); color: var(--creet-blue); }
+    .status-badge.done { background: rgba(34,197,94,0.2); color: var(--creet-green); }
+    .status-badge.pending { background: rgba(234,179,8,0.2); color: var(--creet-yellow); }
+    .status-badge.error { background: rgba(239,68,68,0.2); color: var(--creet-red); }
+
+    .card-desc {
+      color: var(--subtle);
+      font-size: 11px;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--subtle);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--creet-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--subtle);
+    }
+
+    .empty-state .icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-state .title { font-size: 14px; font-weight: 600; color: var(--fg); margin-bottom: 4px; }
+
+    .footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--subtle);
+    }
+
+    .demo-banner {
+      background: linear-gradient(90deg, rgba(255,59,139,0.1), rgba(59,130,246,0.1));
+      border: 1px solid rgba(255,59,139,0.2);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      color: var(--creet-pink);
+      text-align: center;
+    }
+
+    /* Live transcript log */
+    .agent-card.expanded {
+      grid-column: 1 / -1;
+    }
+
+    .card-toggle {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .transcript-log {
+      display: none;
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 11px;
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+
+    .agent-card.expanded .transcript-log {
+      display: block;
+    }
+
+    .transcript-log::-webkit-scrollbar { width: 4px; }
+    .transcript-log::-webkit-scrollbar-track { background: transparent; }
+    .transcript-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-entry {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      animation: log-fade-in 0.3s ease-out;
+    }
+
+    @keyframes log-fade-in {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-entry .log-icon { display: inline-block; width: 16px; text-align: center; margin-right: 4px; opacity: 0.7; }
+    .log-entry.role-assistant .log-icon { color: var(--creet-blue); }
+    .log-entry.role-user .log-icon { color: var(--creet-pink); }
+    .log-entry.type-tool_use { color: var(--creet-yellow); font-family: var(--font-mono); }
+    .log-entry.type-text.role-assistant { color: var(--fg); }
+    .log-entry.type-text.role-user { color: var(--creet-pink); opacity: 0.8; }
+    .log-content { word-break: break-word; }
+    .log-time { color: var(--subtle); font-size: 9px; margin-left: 4px; opacity: 0.6; }
+
+    .expand-hint {
+      font-size: 9px;
+      color: var(--subtle);
+      margin-top: 4px;
+      text-align: center;
+      opacity: 0.6;
+    }
+
+    .agent-card.running .expand-hint {
+      opacity: 1;
+      color: var(--creet-blue);
+    }
+
+    @media (max-width: 480px) {
+      .session-info { flex-direction: column; gap: 4px; }
+      .agent-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="demo-banner">PREVIEW MODE - Simulated agent data with live transitions</div>
+
+    <div class="header">
+      <div class="header-row">
+        <div class="logo">
+          <span class="logo-text">
+            <span class="pink">/cc</span> <span class="blue">Agent Monitor</span>
+          </span>
+        </div>
+        <div id="liveBadge" class="live-badge idle">
+          <span class="live-dot"></span>
+          <span id="liveText">IDLE</span>
+        </div>
+      </div>
+      <div class="session-info">
+        <span id="sessionId">Session: --</span>
+        <span id="sessionTime">Started: --</span>
+        <span id="elapsed">Elapsed: --</span>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-bar-track">
+        <div id="progressFill" class="progress-bar-fill" style="width: 0%"></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><span class="stat-dot running"></span><span id="statRunning">0 running</span></div>
+        <div class="stat"><span class="stat-dot done"></span><span id="statDone">0 done</span></div>
+        <div class="stat"><span class="stat-dot pending"></span><span id="statPending">0 pending</span></div>
+        <div class="stat"><span class="stat-dot error"></span><span id="statError">0 error</span></div>
+      </div>
+    </div>
+
+    <div id="agentGrid" class="agent-grid"></div>
+
+    <div class="footer">
+      <span>creet-vscode v0.1.0</span>
+      <span id="lastUpdate">Last update: --</span>
+    </div>
+  </div>
+
+  <script>
+    let elapsedTimer = null;
+    let sessionStartTime = null;
+    const transcriptLogs = {};
+    let expandedAgentId = null;
+
+    const el = {
+      liveBadge: document.getElementById('liveBadge'),
+      liveText: document.getElementById('liveText'),
+      sessionId: document.getElementById('sessionId'),
+      sessionTime: document.getElementById('sessionTime'),
+      elapsed: document.getElementById('elapsed'),
+      progressFill: document.getElementById('progressFill'),
+      statRunning: document.getElementById('statRunning'),
+      statDone: document.getElementById('statDone'),
+      statPending: document.getElementById('statPending'),
+      statError: document.getElementById('statError'),
+      agentGrid: document.getElementById('agentGrid'),
+      lastUpdate: document.getElementById('lastUpdate'),
+    };
+
+    function render(state) {
+      const { session, agents, summary, lastUpdatedAt } = state;
+
+      const hasRunning = summary.running > 0;
+      el.liveBadge.className = 'live-badge' + (hasRunning ? '' : ' idle');
+      el.liveText.textContent = hasRunning ? 'LIVE' : (session.status === 'completed' ? 'DONE' : 'IDLE');
+
+      el.sessionId.textContent = 'Session: ' + (session.id || '--').substring(0, 20);
+      el.sessionTime.textContent = 'Started: ' + formatTime(session.startedAt);
+
+      if (session.startedAt && session.status === 'active') {
+        sessionStartTime = new Date(session.startedAt).getTime();
+        if (!elapsedTimer) {
+          elapsedTimer = setInterval(updateElapsed, 1000);
+        }
+      } else {
+        if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+        if (session.endedAt && session.startedAt) {
+          const dur = new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime();
+          el.elapsed.textContent = 'Duration: ' + formatDuration(dur);
+        }
+      }
+      updateElapsed();
+
+      const progress = summary.total > 0
+        ? Math.round(((summary.done + summary.error) / summary.total) * 100)
+        : 0;
+      el.progressFill.style.width = progress + '%';
+
+      el.statRunning.textContent = summary.running + ' running';
+      el.statDone.textContent = summary.done + ' done';
+      el.statPending.textContent = summary.pending + ' pending';
+      el.statError.textContent = summary.error + ' error';
+
+      if (agents.length === 0) {
+        el.agentGrid.innerHTML = '<div class="empty-state"><div class="icon">&#x25C8;</div><div class="title">Waiting for agents</div><div>Run <code>/cc</code> in Claude Code</div></div>';
+      } else {
+        el.agentGrid.innerHTML = agents.map(renderCard).join('');
+      }
+
+      el.lastUpdate.textContent = 'Last update: ' + formatTime(lastUpdatedAt);
+    }
+
+    function renderCard(agent, index) {
+      const dur = agent.durationMs
+        ? formatDuration(agent.durationMs)
+        : (agent.status === 'running' ? elapsedSince(agent.startedAt) : '--');
+
+      const spinnerHtml = agent.status === 'running' ? '<span class="spinner"></span>' : '';
+      const errorHtml = agent.error
+        ? '<div style="color:var(--creet-red);font-size:10px;margin-top:4px;">' + escapeHtml(agent.error.substring(0, 100)) + '</div>'
+        : '';
+
+      const isExpanded = expandedAgentId === agent.id;
+      const expandedClass = isExpanded ? ' expanded' : '';
+      const logs = transcriptLogs[agent.id] || [];
+      const logHtml = renderTranscriptLog(logs);
+      const hasLogs = logs.length > 0;
+      const hintText = agent.status === 'running'
+        ? (hasLogs ? (isExpanded ? '▲ click to collapse' : '▼ click to see thinking...') : '◇ waiting for data...')
+        : (hasLogs ? (isExpanded ? '▲ collapse' : '▼ ' + logs.length + ' entries') : '');
+
+      return '<div class="agent-card card-toggle ' + agent.status + expandedClass + '" data-agent-id="' + escapeHtml(agent.id) + '">'
+        + '<div class="card-header">'
+        + '<span class="agent-name">' + escapeHtml(agent.name) + '</span>'
+        + '<span class="status-badge ' + agent.status + '">' + spinnerHtml + agent.status + '</span>'
+        + '</div>'
+        + '<div class="card-desc">' + escapeHtml(agent.description) + '</div>'
+        + errorHtml
+        + '<div class="card-footer">'
+        + '<span>' + dur + '</span>'
+        + '<span>#' + String(index + 1).padStart(2, '0') + '</span>'
+        + '</div>'
+        + (hintText ? '<div class="expand-hint">' + hintText + '</div>' : '')
+        + '<div class="transcript-log" id="log-' + escapeHtml(agent.id) + '">' + logHtml + '</div>'
+        + '</div>';
+    }
+
+    function renderTranscriptLog(entries) {
+      if (entries.length === 0) return '';
+      return entries.map(function(e) {
+        const icon = e.type === 'tool_use' ? '⚙' : (e.role === 'assistant' ? '▸' : '◂');
+        const time = formatTime(e.timestamp);
+        return '<div class="log-entry role-' + e.role + ' type-' + e.type + '">'
+          + '<span class="log-icon">' + icon + '</span>'
+          + '<span class="log-content">' + escapeHtml(e.content) + '</span>'
+          + '<span class="log-time">' + time + '</span>'
+          + '</div>';
+      }).join('');
+    }
+
+    function handleTranscript(entry) {
+      if (!transcriptLogs[entry.agentId]) {
+        transcriptLogs[entry.agentId] = [];
+      }
+      transcriptLogs[entry.agentId].push(entry);
+
+      const logEl = document.getElementById('log-' + entry.agentId);
+      if (logEl) {
+        const icon = entry.type === 'tool_use' ? '⚙' : (entry.role === 'assistant' ? '▸' : '◂');
+        const time = formatTime(entry.timestamp);
+        const div = document.createElement('div');
+        div.className = 'log-entry role-' + entry.role + ' type-' + entry.type;
+        div.innerHTML = '<span class="log-icon">' + icon + '</span>'
+          + '<span class="log-content">' + escapeHtml(entry.content) + '</span>'
+          + '<span class="log-time">' + time + '</span>';
+        logEl.appendChild(div);
+        if (logEl.parentElement && logEl.parentElement.classList.contains('expanded')) {
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+      }
+
+      // Update hint
+      const card = document.querySelector('[data-agent-id="' + entry.agentId + '"]');
+      if (card) {
+        const hint = card.querySelector('.expand-hint');
+        if (hint) {
+          const logs = transcriptLogs[entry.agentId] || [];
+          const isExp = card.classList.contains('expanded');
+          hint.textContent = isExp ? '▲ click to collapse' : '▼ click to see thinking... (' + logs.length + ')';
+        }
+      }
+    }
+
+    // Click handler for expand/collapse
+    document.addEventListener('click', function(e) {
+      const card = e.target.closest('.card-toggle');
+      if (!card) return;
+      const agentId = card.getAttribute('data-agent-id');
+      if (!agentId) return;
+
+      if (expandedAgentId === agentId) {
+        expandedAgentId = null;
+        card.classList.remove('expanded');
+      } else {
+        const prev = document.querySelector('.agent-card.expanded');
+        if (prev) prev.classList.remove('expanded');
+        expandedAgentId = agentId;
+        card.classList.add('expanded');
+        const logEl = document.getElementById('log-' + agentId);
+        if (logEl) logEl.scrollTop = logEl.scrollHeight;
+      }
+    });
+
+    function updateElapsed() {
+      if (sessionStartTime) {
+        el.elapsed.textContent = 'Elapsed: ' + formatDuration(Date.now() - sessionStartTime);
+      }
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleTimeString(); } catch { return '--'; }
+    }
+
+    function formatDuration(ms) {
+      if (!ms || ms < 0) return '0s';
+      const s = Math.floor(ms / 1000);
+      if (s < 60) return s + 's';
+      const m = Math.floor(s / 60);
+      return m + 'm ' + (s % 60) + 's';
+    }
+
+    function elapsedSince(iso) {
+      if (!iso) return '--';
+      try { return formatDuration(Date.now() - new Date(iso).getTime()); } catch { return '--'; }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Demo simulation
+    const now = Date.now();
+    const demoState = {
+      session: { id: 'sess_demo_abc123', startedAt: new Date(now - 45000).toISOString(), endedAt: null, status: 'active' },
+      agents: [
+        { id: '1', name: 'plan-plus', description: 'Overall project plan with brainstorming and PDCA methodology', status: 'done', startedAt: new Date(now - 40000).toISOString(), endedAt: new Date(now - 15000).toISOString(), durationMs: 25000, error: null },
+        { id: '2', name: 'plugin-structure', description: 'Directory structure design for creet plugin extension and VS Code Extension', status: 'running', startedAt: new Date(now - 35000).toISOString(), endedAt: null, durationMs: null, error: null },
+        { id: '3', name: 'hook-development', description: 'PostToolUse/PreToolUse hook design for agent tracking system', status: 'running', startedAt: new Date(now - 33000).toISOString(), endedAt: null, durationMs: null, error: null },
+        { id: '4', name: 'frontend-design', description: 'WebView dashboard UI with cyberpunk theme and real-time updates', status: 'pending', startedAt: null, endedAt: null, durationMs: null, error: null },
+        { id: '5', name: 'phase-1-schema', description: 'Data schema, TypeScript interfaces, and communication protocol definition', status: 'error', startedAt: new Date(now - 30000).toISOString(), endedAt: new Date(now - 25000).toISOString(), durationMs: 5000, error: 'Agent timed out after 60s' },
+      ],
+      summary: { total: 5, pending: 1, running: 2, done: 1, error: 1 },
+      errors: [],
+      lastUpdatedAt: new Date().toISOString(),
+    };
+
+    // Initial render
+    render(demoState);
+
+    // Simulate live transcript entries
+    const demoTranscripts = [
+      { agentId: '2', role: 'assistant', type: 'text', content: 'Analyzing project structure requirements for creet plugin extension...', timestamp: new Date(now + 1000).toISOString() },
+      { agentId: '3', role: 'assistant', type: 'text', content: 'Designing the PostToolUse hook with Task matcher...', timestamp: new Date(now + 1500).toISOString() },
+      { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Glob: src/**/*.ts', timestamp: new Date(now + 2000).toISOString() },
+      { agentId: '3', role: 'assistant', type: 'tool_use', content: 'Read: lib/agent-tracker.js', timestamp: new Date(now + 2500).toISOString() },
+      { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Read: package.json', timestamp: new Date(now + 3000).toISOString() },
+      { agentId: '3', role: 'assistant', type: 'text', content: 'The hook should capture tool_input.description as the agent name and write to .creet/agent-dashboard.json atomically.', timestamp: new Date(now + 3500).toISOString() },
+      { agentId: '2', role: 'assistant', type: 'text', content: 'Found 6 TypeScript files. Recommending src/ directory with types.ts, extension.ts, and separate feature modules for each concern.', timestamp: new Date(now + 4000).toISOString() },
+      { agentId: '3', role: 'assistant', type: 'tool_use', content: 'Write: hooks/pre-tool-task.js', timestamp: new Date(now + 4500).toISOString() },
+      { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Write: src/types.ts', timestamp: new Date(now + 5000).toISOString() },
+      { agentId: '2', role: 'assistant', type: 'text', content: 'Created DashboardState interface with session, agents, summary, and errors fields matching the JSON schema from agent-tracker.js', timestamp: new Date(now + 5500).toISOString() },
+    ];
+
+    let txIdx = 0;
+    const txInterval = setInterval(() => {
+      if (txIdx < demoTranscripts.length) {
+        handleTranscript(demoTranscripts[txIdx]);
+        txIdx++;
+      } else {
+        clearInterval(txInterval);
+      }
+    }, 600);
+
+    // Auto-expand agent '2' after transcript starts
+    setTimeout(() => {
+      const card2 = document.querySelector('[data-agent-id="2"]');
+      if (card2 && !card2.classList.contains('expanded')) {
+        card2.click();
+      }
+    }, 1200);
+
+    // Simulate transitions
+    setTimeout(() => {
+      demoState.agents[2].status = 'done';
+      demoState.agents[2].endedAt = new Date().toISOString();
+      demoState.agents[2].durationMs = Date.now() - new Date(demoState.agents[2].startedAt).getTime();
+      demoState.agents[3].status = 'running';
+      demoState.agents[3].startedAt = new Date().toISOString();
+      demoState.summary = { total: 5, pending: 0, running: 2, done: 2, error: 1 };
+      demoState.lastUpdatedAt = new Date().toISOString();
+      render(demoState);
+    }, 5000);
+
+    setTimeout(() => {
+      demoState.agents[1].status = 'done';
+      demoState.agents[1].endedAt = new Date().toISOString();
+      demoState.agents[1].durationMs = Date.now() - new Date(demoState.agents[1].startedAt).getTime();
+      demoState.agents[3].status = 'done';
+      demoState.agents[3].endedAt = new Date().toISOString();
+      demoState.agents[3].durationMs = Date.now() - new Date(demoState.agents[3].startedAt).getTime();
+      demoState.summary = { total: 5, pending: 0, running: 0, done: 4, error: 1 };
+      demoState.session.status = 'completed';
+      demoState.session.endedAt = new Date().toISOString();
+      demoState.lastUpdatedAt = new Date().toISOString();
+      render(demoState);
+    }, 10000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+{
+  "name": "creet-agent-dashboard",
+  "displayName": "Creet for Claude Multi Agent",
+  "description": "Real-time multi-agent dashboard for Claude Code. Visualize parallel agent execution, live thinking process, and tool calls from the creet plugin.",
+  "icon": "media/icon.png",
+  "version": "0.2.0",
+  "publisher": "creeta",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Creeta-creet/creet-vscode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "claude-code",
+    "creet",
+    "creeta",
+    "multi-agent",
+    "dashboard",
+    "ai-agents"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "creeta.openDashboard",
+        "title": "Open Agent Dashboard",
+        "category": "Creeta",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "creeta.refreshDashboard",
+        "title": "Refresh Dashboard",
+        "category": "Creeta",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "creeta.clearDashboard",
+        "title": "Clear Dashboard History",
+        "category": "Creeta",
+        "icon": "$(trash)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "creeta-agents",
+          "title": "Creeta Agents",
+          "icon": "$(pulse)"
+        }
+      ]
+    },
+    "views": {
+      "creeta-agents": [
+        {
+          "id": "creetaAgentTree",
+          "name": "Agent Status",
+          "contextualTitle": "Creeta Agent Dashboard"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "creeta.openDashboard",
+          "when": "view == creetaAgentTree",
+          "group": "navigation"
+        },
+        {
+          "command": "creeta.refreshDashboard",
+          "when": "view == creetaAgentTree",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Creeta Agent Dashboard",
+      "properties": {
+        "creeta.autoOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open the dashboard when agents start running."
+        },
+        "creeta.pollInterval": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "maximum": 5000,
+          "description": "Dashboard polling interval in milliseconds."
+        },
+        "creeta.theme": {
+          "type": "string",
+          "default": "cyberpunk",
+          "enum": ["cyberpunk", "minimal", "terminal"],
+          "description": "Dashboard visual theme."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
