@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Creet Agent Dashboard - Preview</title>
+  <title>Pulse Agent Dashboard - Preview</title>
   <style>
     :root {
-      --creet-pink: #ff3b8b;
-      --creet-blue: #3b82f6;
-      --creet-navy: #0f172a;
-      --creet-green: #22c55e;
-      --creet-red: #ef4444;
-      --creet-yellow: #eab308;
-      --creet-gray: #64748b;
+      --pulse-pink: #ff3b8b;
+      --pulse-blue: #3b82f6;
+      --pulse-navy: #0f172a;
+      --pulse-green: #22c55e;
+      --pulse-red: #ef4444;
+      --pulse-yellow: #eab308;
+      --pulse-gray: #64748b;
       --bg: #0e0e12;
       --fg: #e2e8f0;
       --border: #1e293b;
@@ -68,7 +68,7 @@
       left: 0;
       right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--creet-pink), var(--creet-blue), var(--creet-navy));
+      background: linear-gradient(90deg, var(--pulse-pink), var(--pulse-blue), var(--pulse-navy));
     }
 
     .header-row {
@@ -90,15 +90,15 @@
       letter-spacing: 0.5px;
     }
 
-    .logo-text .pink { color: var(--creet-pink); }
-    .logo-text .blue { color: var(--creet-blue); }
+    .logo-text .pink { color: var(--pulse-pink); }
+    .logo-text .blue { color: var(--pulse-blue); }
 
     .live-badge {
       display: inline-flex;
       align-items: center;
       gap: 4px;
       background: rgba(239, 68, 68, 0.15);
-      color: var(--creet-red);
+      color: var(--pulse-red);
       padding: 2px 8px;
       border-radius: 10px;
       font-size: 10px;
@@ -111,12 +111,12 @@
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--creet-red);
+      background: var(--pulse-red);
       animation: pulse 1.5s ease-in-out infinite;
     }
 
-    .live-badge.idle { background: rgba(100,116,139,0.15); color: var(--creet-gray); }
-    .live-badge.idle .live-dot { background: var(--creet-gray); animation: none; }
+    .live-badge.idle { background: rgba(100,116,139,0.15); color: var(--pulse-gray); }
+    .live-badge.idle .live-dot { background: var(--pulse-gray); animation: none; }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
@@ -145,7 +145,7 @@
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--creet-pink), var(--creet-blue));
+      background: linear-gradient(90deg, var(--pulse-pink), var(--pulse-blue));
       border-radius: 2px;
       transition: width 0.5s ease;
       position: relative;
@@ -183,10 +183,10 @@
       border-radius: 50%;
     }
 
-    .stat-dot.running { background: var(--creet-blue); }
-    .stat-dot.done { background: var(--creet-green); }
-    .stat-dot.pending { background: var(--creet-yellow); }
-    .stat-dot.error { background: var(--creet-red); }
+    .stat-dot.running { background: var(--pulse-blue); }
+    .stat-dot.done { background: var(--pulse-green); }
+    .stat-dot.pending { background: var(--pulse-yellow); }
+    .stat-dot.error { background: var(--pulse-red); }
 
     .agent-grid {
       display: grid;
@@ -218,23 +218,23 @@
 
     .agent-card.running { border-color: rgba(59,130,246,0.3); }
     .agent-card.running::before {
-      background: var(--creet-blue);
-      box-shadow: 0 0 8px var(--creet-blue);
+      background: var(--pulse-blue);
+      box-shadow: 0 0 8px var(--pulse-blue);
       animation: edge-pulse 2s ease-in-out infinite;
     }
 
     .agent-card.done { opacity: 0.75; }
-    .agent-card.done::before { background: var(--creet-green); }
+    .agent-card.done::before { background: var(--pulse-green); }
 
     .agent-card.pending { opacity: 0.6; }
-    .agent-card.pending::before { background: var(--creet-yellow); }
+    .agent-card.pending::before { background: var(--pulse-yellow); }
 
     .agent-card.error { border-color: rgba(239,68,68,0.3); }
-    .agent-card.error::before { background: var(--creet-red); }
+    .agent-card.error::before { background: var(--pulse-red); }
 
     @keyframes edge-pulse {
-      0%, 100% { box-shadow: 0 0 4px var(--creet-blue); }
-      50% { box-shadow: 0 0 12px var(--creet-blue); }
+      0%, 100% { box-shadow: 0 0 4px var(--pulse-blue); }
+      50% { box-shadow: 0 0 12px var(--pulse-blue); }
     }
 
     @keyframes card-enter {
@@ -267,10 +267,10 @@
       letter-spacing: 0.5px;
     }
 
-    .status-badge.running { background: rgba(59,130,246,0.2); color: var(--creet-blue); }
-    .status-badge.done { background: rgba(34,197,94,0.2); color: var(--creet-green); }
-    .status-badge.pending { background: rgba(234,179,8,0.2); color: var(--creet-yellow); }
-    .status-badge.error { background: rgba(239,68,68,0.2); color: var(--creet-red); }
+    .status-badge.running { background: rgba(59,130,246,0.2); color: var(--pulse-blue); }
+    .status-badge.done { background: rgba(34,197,94,0.2); color: var(--pulse-green); }
+    .status-badge.pending { background: rgba(234,179,8,0.2); color: var(--pulse-yellow); }
+    .status-badge.error { background: rgba(239,68,68,0.2); color: var(--pulse-red); }
 
     .card-desc {
       color: var(--subtle);
@@ -295,7 +295,7 @@
       width: 12px;
       height: 12px;
       border: 2px solid var(--border);
-      border-top-color: var(--creet-blue);
+      border-top-color: var(--pulse-blue);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin-right: 4px;
@@ -332,7 +332,7 @@
       padding: 8px 12px;
       margin-bottom: 16px;
       font-size: 11px;
-      color: var(--creet-pink);
+      color: var(--pulse-pink);
       text-align: center;
     }
 
@@ -378,11 +378,11 @@
     }
 
     .log-entry .log-icon { display: inline-block; width: 16px; text-align: center; margin-right: 4px; opacity: 0.7; }
-    .log-entry.role-assistant .log-icon { color: var(--creet-blue); }
-    .log-entry.role-user .log-icon { color: var(--creet-pink); }
-    .log-entry.type-tool_use { color: var(--creet-yellow); font-family: var(--font-mono); }
+    .log-entry.role-assistant .log-icon { color: var(--pulse-blue); }
+    .log-entry.role-user .log-icon { color: var(--pulse-pink); }
+    .log-entry.type-tool_use { color: var(--pulse-yellow); font-family: var(--font-mono); }
     .log-entry.type-text.role-assistant { color: var(--fg); }
-    .log-entry.type-text.role-user { color: var(--creet-pink); opacity: 0.8; }
+    .log-entry.type-text.role-user { color: var(--pulse-pink); opacity: 0.8; }
     .log-content { word-break: break-word; }
     .log-time { color: var(--subtle); font-size: 9px; margin-left: 4px; opacity: 0.6; }
 
@@ -396,7 +396,7 @@
 
     .agent-card.running .expand-hint {
       opacity: 1;
-      color: var(--creet-blue);
+      color: var(--pulse-blue);
     }
 
     @media (max-width: 480px) {
@@ -443,7 +443,7 @@
     <div id="agentGrid" class="agent-grid"></div>
 
     <div class="footer">
-      <span>creet-vscode v0.1.0</span>
+      <span>pulse v0.2.0</span>
       <span id="lastUpdate">Last update: --</span>
     </div>
   </div>
@@ -519,7 +519,7 @@
 
       const spinnerHtml = agent.status === 'running' ? '<span class="spinner"></span>' : '';
       const errorHtml = agent.error
-        ? '<div style="color:var(--creet-red);font-size:10px;margin-top:4px;">' + escapeHtml(agent.error.substring(0, 100)) + '</div>'
+        ? '<div style="color:var(--pulse-red);font-size:10px;margin-top:4px;">' + escapeHtml(agent.error.substring(0, 100)) + '</div>'
         : '';
 
       const isExpanded = expandedAgentId === agent.id;
@@ -648,7 +648,7 @@
       session: { id: 'sess_demo_abc123', startedAt: new Date(now - 45000).toISOString(), endedAt: null, status: 'active' },
       agents: [
         { id: '1', name: 'plan-plus', description: 'Overall project plan with brainstorming and PDCA methodology', status: 'done', startedAt: new Date(now - 40000).toISOString(), endedAt: new Date(now - 15000).toISOString(), durationMs: 25000, error: null },
-        { id: '2', name: 'plugin-structure', description: 'Directory structure design for creet plugin extension and VS Code Extension', status: 'running', startedAt: new Date(now - 35000).toISOString(), endedAt: null, durationMs: null, error: null },
+        { id: '2', name: 'plugin-structure', description: 'Directory structure design for lens plugin extension and VS Code Extension', status: 'running', startedAt: new Date(now - 35000).toISOString(), endedAt: null, durationMs: null, error: null },
         { id: '3', name: 'hook-development', description: 'PostToolUse/PreToolUse hook design for agent tracking system', status: 'running', startedAt: new Date(now - 33000).toISOString(), endedAt: null, durationMs: null, error: null },
         { id: '4', name: 'frontend-design', description: 'WebView dashboard UI with cyberpunk theme and real-time updates', status: 'pending', startedAt: null, endedAt: null, durationMs: null, error: null },
         { id: '5', name: 'phase-1-schema', description: 'Data schema, TypeScript interfaces, and communication protocol definition', status: 'error', startedAt: new Date(now - 30000).toISOString(), endedAt: new Date(now - 25000).toISOString(), durationMs: 5000, error: 'Agent timed out after 60s' },
@@ -663,12 +663,12 @@
 
     // Simulate live transcript entries
     const demoTranscripts = [
-      { agentId: '2', role: 'assistant', type: 'text', content: 'Analyzing project structure requirements for creet plugin extension...', timestamp: new Date(now + 1000).toISOString() },
+      { agentId: '2', role: 'assistant', type: 'text', content: 'Analyzing project structure requirements for lens plugin extension...', timestamp: new Date(now + 1000).toISOString() },
       { agentId: '3', role: 'assistant', type: 'text', content: 'Designing the PostToolUse hook with Task matcher...', timestamp: new Date(now + 1500).toISOString() },
       { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Glob: src/**/*.ts', timestamp: new Date(now + 2000).toISOString() },
       { agentId: '3', role: 'assistant', type: 'tool_use', content: 'Read: lib/agent-tracker.js', timestamp: new Date(now + 2500).toISOString() },
       { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Read: package.json', timestamp: new Date(now + 3000).toISOString() },
-      { agentId: '3', role: 'assistant', type: 'text', content: 'The hook should capture tool_input.description as the agent name and write to .creet/agent-dashboard.json atomically.', timestamp: new Date(now + 3500).toISOString() },
+      { agentId: '3', role: 'assistant', type: 'text', content: 'The hook should capture tool_input.description as the agent name and write to .lens/agent-dashboard.json atomically.', timestamp: new Date(now + 3500).toISOString() },
       { agentId: '2', role: 'assistant', type: 'text', content: 'Found 6 TypeScript files. Recommending src/ directory with types.ts, extension.ts, and separate feature modules for each concern.', timestamp: new Date(now + 4000).toISOString() },
       { agentId: '3', role: 'assistant', type: 'tool_use', content: 'Write: hooks/pre-tool-task.js', timestamp: new Date(now + 4500).toISOString() },
       { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Write: src/types.ts', timestamp: new Date(now + 5000).toISOString() },

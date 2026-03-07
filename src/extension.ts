@@ -17,8 +17,8 @@ let treeProvider: AgentTreeProvider | undefined;
 let transcriptReader: TranscriptReader | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const outputChannel = vscode.window.createOutputChannel('Creet Agent Dashboard');
-  outputChannel.appendLine('[Creet] Extension activating...');
+  const outputChannel = vscode.window.createOutputChannel('Pulse Agent Dashboard');
+  outputChannel.appendLine('[Pulse] Extension activating...');
 
   // Status bar
   statusBar = new StatusBarManager();
@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // TreeView
   treeProvider = new AgentTreeProvider();
-  const treeView = vscode.window.createTreeView('creetaAgentTree', {
+  const treeView = vscode.window.createTreeView('pulseAgentTree', {
     treeDataProvider: treeProvider,
   });
   context.subscriptions.push(treeView);
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('creeta.openDashboard', () => {
+    vscode.commands.registerCommand('pulse.openDashboard', () => {
       const panel = DashboardPanel.createOrShow(context.extensionUri);
       // Send all current project states
       for (const [project, state] of projectStates) {
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('creeta.refreshDashboard', () => {
+    vscode.commands.registerCommand('pulse.refreshDashboard', () => {
       for (const [project, watcher] of watchers) {
         const state = watcher.readNow();
         if (state) {
@@ -60,11 +60,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('creeta.clearDashboard', () => {
+    vscode.commands.registerCommand('pulse.clearDashboard', () => {
       projectStates.clear();
       DashboardPanel.currentPanel?.clearAll();
       const empty: DashboardState = {
-        $schema: 'creet-agent-dashboard/1.0.0',
+        $schema: 'pulse-agent-dashboard/1.0.0',
         session: { id: '', startedAt: '', endedAt: null, status: 'completed' },
         agents: [],
         summary: { total: 0, pending: 0, running: 0, done: 0, error: 0 },
@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(outputChannel);
-  outputChannel.appendLine('[Creet] Extension activated.');
+  outputChannel.appendLine('[Pulse] Extension activated.');
 }
 
 /** Sync watchers to match current workspace folders */
@@ -99,14 +99,14 @@ function syncWatchers(output: vscode.OutputChannel): void {
       watchers.delete(project);
       projectStates.delete(project);
       previousRunningCount.delete(project);
-      output.appendLine(`[Creet] Stopped watching: ${project}`);
+      output.appendLine(`[Pulse] Stopped watching: ${project}`);
     }
   }
 
   // Add watchers for new folders
   for (const folder of folders) {
     if (!watchers.has(folder.name)) {
-      const dashboardDir = path.join(folder.uri.fsPath, '.creet');
+      const dashboardDir = path.join(folder.uri.fsPath, '.lens');
       startWatcher(folder.name, dashboardDir, output);
     }
   }
@@ -124,12 +124,12 @@ function startWatcher(projectName: string, dashboardDir: string, output: vscode.
       .getConfiguration('creeta')
       .get<boolean>('autoOpen', true);
     if (autoOpen) {
-      vscode.commands.executeCommand('creeta.openDashboard');
+      vscode.commands.executeCommand('pulse.openDashboard');
     }
   });
 
   watchers.set(projectName, watcher);
-  output.appendLine(`[Creet] Watching: ${dashboardDir}`);
+  output.appendLine(`[Pulse] Watching: ${dashboardDir}`);
 
   // Initial read
   const initialState = watcher.readNow();
@@ -168,7 +168,7 @@ function handleStateUpdate(projectName: string, rawState: DashboardState): void 
       .getConfiguration('creeta')
       .get<boolean>('autoOpen', true);
     if (autoOpen) {
-      vscode.commands.executeCommand('creeta.openDashboard');
+      vscode.commands.executeCommand('pulse.openDashboard');
     }
   }
 }
@@ -197,7 +197,7 @@ function buildAggregateState(): DashboardState {
     error += s.summary.error;
   }
   return {
-    $schema: 'creet-agent-dashboard/1.0.0',
+    $schema: 'pulse-agent-dashboard/1.0.0',
     session: { id: '', startedAt: '', endedAt: null, status: running > 0 ? 'active' : 'completed' },
     agents: [],
     summary: { total: running + done + pending + error, running, done, pending, error },

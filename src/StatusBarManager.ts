@@ -13,7 +13,7 @@ export class StatusBarManager implements vscode.Disposable {
       100
     );
     this.item.command = 'creeta.openDashboard';
-    this.item.tooltip = 'Creet Agent Dashboard';
+    this.item.tooltip = 'Pulse Agent Dashboard';
     this.reset();
   }
 
@@ -21,7 +21,7 @@ export class StatusBarManager implements vscode.Disposable {
     const { summary } = state;
 
     if (summary.running > 0) {
-      this.item.text = `$(sync~spin) Creet: ${summary.running} running`;
+      this.item.text = `$(sync~spin) Pulse: ${summary.running} running`;
       this.item.backgroundColor = new vscode.ThemeColor(
         'statusBarItem.warningBackground'
       );
@@ -32,7 +32,7 @@ export class StatusBarManager implements vscode.Disposable {
   }
 
   private reset(): void {
-    this.item.text = '$(pulse) Creet';
+    this.item.text = '$(pulse) Pulse';
     this.item.backgroundColor = undefined;
     this.item.show();
   }

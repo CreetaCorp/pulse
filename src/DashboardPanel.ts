@@ -3,12 +3,12 @@ import { DashboardState, AgentEntry } from './types';
 import { TranscriptEntry } from './TranscriptReader';
 
 /**
- * Manages the WebView panel for the Creet Agent Dashboard.
+ * Manages the WebView panel for the Pulse Agent Dashboard.
  * Shows real-time agent status with a cyberpunk-inspired UI.
  */
 export class DashboardPanel {
   public static currentPanel: DashboardPanel | undefined;
-  private static readonly viewType = 'creetDashboard';
+  private static readonly viewType = 'pulseDashboard';
 
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
@@ -30,7 +30,7 @@ export class DashboardPanel {
 
     const panel = vscode.window.createWebviewPanel(
       DashboardPanel.viewType,
-      'Creet Agent Dashboard',
+      'Pulse Agent Dashboard',
       column,
       {
         enableScripts: true,
@@ -78,16 +78,16 @@ export class DashboardPanel {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
-  <title>Creet Agent Dashboard</title>
+  <title>Pulse Agent Dashboard</title>
   <style nonce="${nonce}">
     :root {
-      --creet-pink: #ff3b8b;
-      --creet-blue: #3b82f6;
-      --creet-navy: #0f172a;
-      --creet-green: #22c55e;
-      --creet-red: #ef4444;
-      --creet-yellow: #eab308;
-      --creet-gray: #64748b;
+      --pulse-pink: #ff3b8b;
+      --pulse-blue: #3b82f6;
+      --pulse-navy: #0f172a;
+      --pulse-green: #22c55e;
+      --pulse-red: #ef4444;
+      --pulse-yellow: #eab308;
+      --pulse-gray: #64748b;
       --bg: var(--vscode-editor-background, #0e0e12);
       --fg: var(--vscode-editor-foreground, #e2e8f0);
       --border: var(--vscode-panel-border, #1e293b);
@@ -145,7 +145,7 @@ export class DashboardPanel {
       left: 0;
       right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--creet-pink), var(--creet-blue), var(--creet-navy));
+      background: linear-gradient(90deg, var(--pulse-pink), var(--pulse-blue), var(--pulse-navy));
     }
 
     .header-row {
@@ -167,15 +167,15 @@ export class DashboardPanel {
       letter-spacing: 0.5px;
     }
 
-    .logo-text .pink { color: var(--creet-pink); }
-    .logo-text .blue { color: var(--creet-blue); }
+    .logo-text .pink { color: var(--pulse-pink); }
+    .logo-text .blue { color: var(--pulse-blue); }
 
     .live-badge {
       display: inline-flex;
       align-items: center;
       gap: 4px;
       background: rgba(239, 68, 68, 0.15);
-      color: var(--creet-red);
+      color: var(--pulse-red);
       padding: 2px 8px;
       border-radius: 10px;
       font-size: 10px;
@@ -188,12 +188,12 @@ export class DashboardPanel {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--creet-red);
+      background: var(--pulse-red);
       animation: pulse 1.5s ease-in-out infinite;
     }
 
-    .live-badge.idle { background: rgba(100,116,139,0.15); color: var(--creet-gray); }
-    .live-badge.idle .live-dot { background: var(--creet-gray); animation: none; }
+    .live-badge.idle { background: rgba(100,116,139,0.15); color: var(--pulse-gray); }
+    .live-badge.idle .live-dot { background: var(--pulse-gray); animation: none; }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
@@ -223,7 +223,7 @@ export class DashboardPanel {
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--creet-pink), var(--creet-blue));
+      background: linear-gradient(90deg, var(--pulse-pink), var(--pulse-blue));
       border-radius: 2px;
       transition: width 0.5s ease;
       position: relative;
@@ -261,10 +261,10 @@ export class DashboardPanel {
       border-radius: 50%;
     }
 
-    .stat-dot.running { background: var(--creet-blue); }
-    .stat-dot.done { background: var(--creet-green); }
-    .stat-dot.pending { background: var(--creet-yellow); }
-    .stat-dot.error { background: var(--creet-red); }
+    .stat-dot.running { background: var(--pulse-blue); }
+    .stat-dot.done { background: var(--pulse-green); }
+    .stat-dot.pending { background: var(--pulse-yellow); }
+    .stat-dot.error { background: var(--pulse-red); }
 
     /* Agent grid */
     .agent-grid {
@@ -296,23 +296,23 @@ export class DashboardPanel {
 
     .agent-card.running { border-color: rgba(59,130,246,0.3); }
     .agent-card.running::before {
-      background: var(--creet-blue);
-      box-shadow: 0 0 8px var(--creet-blue);
+      background: var(--pulse-blue);
+      box-shadow: 0 0 8px var(--pulse-blue);
       animation: edge-pulse 2s ease-in-out infinite;
     }
 
     .agent-card.done { opacity: 0.75; }
-    .agent-card.done::before { background: var(--creet-green); }
+    .agent-card.done::before { background: var(--pulse-green); }
 
     .agent-card.pending { opacity: 0.6; }
-    .agent-card.pending::before { background: var(--creet-yellow); }
+    .agent-card.pending::before { background: var(--pulse-yellow); }
 
     .agent-card.error { border-color: rgba(239,68,68,0.3); }
-    .agent-card.error::before { background: var(--creet-red); }
+    .agent-card.error::before { background: var(--pulse-red); }
 
     @keyframes edge-pulse {
-      0%, 100% { box-shadow: 0 0 4px var(--creet-blue); }
-      50% { box-shadow: 0 0 12px var(--creet-blue); }
+      0%, 100% { box-shadow: 0 0 4px var(--pulse-blue); }
+      50% { box-shadow: 0 0 12px var(--pulse-blue); }
     }
 
     .card-header {
@@ -342,19 +342,19 @@ export class DashboardPanel {
 
     .status-badge.running {
       background: rgba(59,130,246,0.2);
-      color: var(--creet-blue);
+      color: var(--pulse-blue);
     }
     .status-badge.done {
       background: rgba(34,197,94,0.2);
-      color: var(--creet-green);
+      color: var(--pulse-green);
     }
     .status-badge.pending {
       background: rgba(234,179,8,0.2);
-      color: var(--creet-yellow);
+      color: var(--pulse-yellow);
     }
     .status-badge.error {
       background: rgba(239,68,68,0.2);
-      color: var(--creet-red);
+      color: var(--pulse-red);
     }
 
     .card-desc {
@@ -392,7 +392,7 @@ export class DashboardPanel {
       width: 12px;
       height: 12px;
       border: 2px solid var(--border);
-      border-top-color: var(--creet-blue);
+      border-top-color: var(--pulse-blue);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin-right: 4px;
@@ -495,11 +495,11 @@ export class DashboardPanel {
       opacity: 0.7;
     }
 
-    .log-entry.role-assistant .log-icon { color: var(--creet-blue); }
-    .log-entry.role-user .log-icon { color: var(--creet-pink); }
+    .log-entry.role-assistant .log-icon { color: var(--pulse-blue); }
+    .log-entry.role-user .log-icon { color: var(--pulse-pink); }
 
     .log-entry.type-tool_use {
-      color: var(--creet-yellow);
+      color: var(--pulse-yellow);
       font-family: var(--font-mono);
     }
 
@@ -508,7 +508,7 @@ export class DashboardPanel {
     }
 
     .log-entry.type-text.role-user {
-      color: var(--creet-pink);
+      color: var(--pulse-pink);
       opacity: 0.8;
     }
 
@@ -539,7 +539,7 @@ export class DashboardPanel {
 
     .agent-card.running .expand-hint {
       opacity: 1;
-      color: var(--creet-blue);
+      color: var(--pulse-blue);
     }
 
     /* Project tabs */
@@ -565,14 +565,14 @@ export class DashboardPanel {
     }
 
     .project-tab:hover {
-      border-color: var(--creet-blue);
+      border-color: var(--pulse-blue);
       color: var(--fg);
     }
 
     .project-tab.active {
-      border-color: var(--creet-blue);
+      border-color: var(--pulse-blue);
       background: rgba(59,130,246,0.1);
-      color: var(--creet-blue);
+      color: var(--pulse-blue);
     }
 
     .project-tab.has-running {
@@ -580,18 +580,18 @@ export class DashboardPanel {
     }
 
     .project-tab.has-running.active {
-      border-color: var(--creet-blue);
+      border-color: var(--pulse-blue);
     }
 
     .tab-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--creet-gray);
+      background: var(--pulse-gray);
     }
 
     .project-tab.has-running .tab-dot {
-      background: var(--creet-blue);
+      background: var(--pulse-blue);
       animation: pulse 1.5s ease-in-out infinite;
     }
 
@@ -723,7 +723,7 @@ export class DashboardPanel {
           return '<div class="project-tab' + (isActive ? ' active' : '') + (hasRunning ? ' has-running' : '') + '" data-project="' + escapeHtml(name) + '">'
             + '<span class="tab-dot"></span>'
             + escapeHtml(name)
-            + (hasRunning ? ' <span style="color:var(--creet-blue);font-size:9px">(' + s.running + ')</span>' : '')
+            + (hasRunning ? ' <span style="color:var(--pulse-blue);font-size:9px">(' + s.running + ')</span>' : '')
             + '</div>';
         }).join('');
       }
@@ -984,7 +984,7 @@ export class DashboardPanel {
             { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Read: src/extension.ts', timestamp: new Date(Date.now() + 2000).toISOString() },
             { agentId: '3', role: 'assistant', type: 'tool_use', content: 'Grep: registerAgent', timestamp: new Date(Date.now() + 2500).toISOString() },
             { agentId: '2', role: 'assistant', type: 'text', content: 'Found 6 TypeScript files. Recommending src/ directory with types.ts, extension.ts, and feature modules.', timestamp: new Date(Date.now() + 3000).toISOString() },
-            { agentId: '3', role: 'assistant', type: 'text', content: 'The hook should capture tool_input.description as the agent name and write to .creet/agent-dashboard.json', timestamp: new Date(Date.now() + 3500).toISOString() },
+            { agentId: '3', role: 'assistant', type: 'text', content: 'The hook should capture tool_input.description as the agent name and write to .lens/agent-dashboard.json', timestamp: new Date(Date.now() + 3500).toISOString() },
             { agentId: '2', role: 'assistant', type: 'tool_use', content: 'Write: src/types.ts', timestamp: new Date(Date.now() + 4000).toISOString() },
           ];
 

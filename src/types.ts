@@ -1,6 +1,6 @@
 /**
- * Creet Agent Dashboard - Shared Types
- * Matches the JSON schema from creet plugin's agent-tracker.js
+ * Pulse Agent Dashboard - Shared Types
+ * Matches the JSON schema from lens plugin's agent-tracker.js
  */
 
 export interface DashboardState {

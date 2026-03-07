@@ -4,7 +4,7 @@ import * as path from 'path';
 import { DashboardState } from './types';
 
 /**
- * Watches .creet/agent-dashboard.json for changes.
+ * Watches .lens/agent-dashboard.json for changes.
  * Uses FileSystemWatcher + polling fallback for reliability.
  */
 export class AgentWatcher implements vscode.Disposable {

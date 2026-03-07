@@ -1,14 +1,14 @@
 {
-  "name": "creet-agent-dashboard",
-  "displayName": "Creet for Claude Multi Agent",
-  "description": "Real-time multi-agent dashboard for Claude Code. Visualize parallel agent execution, live thinking process, and tool calls from the creet plugin.",
+  "name": "pulse-agent-dashboard",
+  "displayName": "Pulse — Real-time Agent Dashboard",
+  "description": "Real-time multi-agent dashboard for Claude Code. Visualize parallel agent execution, live thinking process, and tool calls from the lens plugin.",
   "icon": "media/icon.png",
   "version": "0.2.0",
-  "publisher": "creeta",
+  "publisher": "CreetaCorp",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Creeta-creet/creet-vscode"
+    "url": "https://github.com/CreetaCorp/pulse"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -19,8 +19,8 @@
   ],
   "keywords": [
     "claude-code",
-    "creet",
-    "creeta",
+    "lens",
+    "CreetaCorp",
     "multi-agent",
     "dashboard",
     "ai-agents"
@@ -32,72 +32,72 @@
   "contributes": {
     "commands": [
       {
-        "command": "creeta.openDashboard",
+        "command": "pulse.openDashboard",
         "title": "Open Agent Dashboard",
-        "category": "Creeta",
+        "category": "Pulse",
         "icon": "$(pulse)"
       },
       {
-        "command": "creeta.refreshDashboard",
+        "command": "pulse.refreshDashboard",
         "title": "Refresh Dashboard",
-        "category": "Creeta",
+        "category": "Pulse",
         "icon": "$(refresh)"
       },
       {
-        "command": "creeta.clearDashboard",
+        "command": "pulse.clearDashboard",
         "title": "Clear Dashboard History",
-        "category": "Creeta",
+        "category": "Pulse",
         "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "creeta-agents",
-          "title": "Creeta Agents",
+          "id": "pulse-agents",
+          "title": "Pulse Agents",
           "icon": "$(pulse)"
         }
       ]
     },
     "views": {
-      "creeta-agents": [
+      "pulse-agents": [
         {
-          "id": "creetaAgentTree",
+          "id": "pulseAgentTree",
           "name": "Agent Status",
-          "contextualTitle": "Creeta Agent Dashboard"
+          "contextualTitle": "Pulse Agent Dashboard"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "creeta.openDashboard",
+          "command": "pulse.openDashboard",
           "when": "view == creetaAgentTree",
           "group": "navigation"
         },
         {
-          "command": "creeta.refreshDashboard",
+          "command": "pulse.refreshDashboard",
           "when": "view == creetaAgentTree",
           "group": "navigation"
         }
       ]
     },
     "configuration": {
-      "title": "Creeta Agent Dashboard",
+      "title": "Pulse Agent Dashboard",
       "properties": {
-        "creeta.autoOpen": {
+        "pulse.autoOpen": {
           "type": "boolean",
           "default": true,
           "description": "Automatically open the dashboard when agents start running."
         },
-        "creeta.pollInterval": {
+        "pulse.pollInterval": {
           "type": "number",
           "default": 500,
           "minimum": 100,
           "maximum": 5000,
           "description": "Dashboard polling interval in milliseconds."
         },
-        "creeta.theme": {
+        "pulse.theme": {
           "type": "string",
           "default": "cyberpunk",
           "enum": ["cyberpunk", "minimal", "terminal"],
