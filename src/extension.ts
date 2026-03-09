@@ -121,7 +121,7 @@ function startWatcher(projectName: string, dashboardDir: string, output: vscode.
 
   watcher.onFileCreated(() => {
     const autoOpen = vscode.workspace
-      .getConfiguration('creeta')
+      .getConfiguration('pulse')
       .get<boolean>('autoOpen', true);
     if (autoOpen) {
       vscode.commands.executeCommand('pulse.openDashboard');
@@ -165,7 +165,7 @@ function handleStateUpdate(projectName: string, rawState: DashboardState): void 
   previousRunningCount.set(projectName, state.summary.running);
   if (state.summary.running > 0 && prevRunning === 0 && !DashboardPanel.currentPanel) {
     const autoOpen = vscode.workspace
-      .getConfiguration('creeta')
+      .getConfiguration('pulse')
       .get<boolean>('autoOpen', true);
     if (autoOpen) {
       vscode.commands.executeCommand('pulse.openDashboard');

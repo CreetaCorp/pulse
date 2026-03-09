@@ -12,7 +12,7 @@ export class StatusBarManager implements vscode.Disposable {
       vscode.StatusBarAlignment.Left,
       100
     );
-    this.item.command = 'creeta.openDashboard';
+    this.item.command = 'pulse.openDashboard';
     this.item.tooltip = 'Pulse Agent Dashboard';
     this.reset();
   }

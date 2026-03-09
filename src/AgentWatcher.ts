@@ -46,7 +46,7 @@ export class AgentWatcher implements vscode.Disposable {
 
   private setupPolling(): void {
     const interval = vscode.workspace
-      .getConfiguration('creeta')
+      .getConfiguration('pulse')
       .get<number>('pollInterval', 500);
     this.pollTimer = setInterval(() => this.readAndEmit(), interval);
   }

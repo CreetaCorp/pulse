@@ -72,12 +72,12 @@
       "view/title": [
         {
           "command": "pulse.openDashboard",
-          "when": "view == creetaAgentTree",
+          "when": "view == pulseAgentTree",
           "group": "navigation"
         },
         {
           "command": "pulse.refreshDashboard",
-          "when": "view == creetaAgentTree",
+          "when": "view == pulseAgentTree",
           "group": "navigation"
         }
       ]
