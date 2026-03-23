@@ -617,14 +617,22 @@ export class DashboardPanel {
       </div>
     </div>
 
-    <div id="progressFill" style="display:none"></div>
-    <span id="sessionId" style="display:none"></span>
+    <div class="progress-section">
+      <div class="session-info">
+        <span id="sessionId">Session: --</span>
+        <span id="elapsed">Elapsed: --</span>
+      </div>
+      <div class="progress-bar-track" style="margin-top:8px">
+        <div id="progressFill" class="progress-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="stats-row">
+        <span class="stat"><span class="stat-dot running"></span> <span id="statRunning">0 running</span></span>
+        <span class="stat"><span class="stat-dot done"></span> <span id="statDone">0 done</span></span>
+        <span class="stat"><span class="stat-dot pending"></span> <span id="statPending">0 pending</span></span>
+        <span class="stat"><span class="stat-dot error"></span> <span id="statError">0 error</span></span>
+      </div>
+    </div>
     <span id="sessionTime" style="display:none"></span>
-    <span id="elapsed" style="display:none"></span>
-    <span id="statRunning" style="display:none"></span>
-    <span id="statDone" style="display:none"></span>
-    <span id="statPending" style="display:none"></span>
-    <span id="statError" style="display:none"></span>
     <span id="lastUpdate" style="display:none"></span>
 
     <div id="projectTabs" class="project-tabs" style="display:none"></div>
@@ -644,6 +652,7 @@ export class DashboardPanel {
 
       let elapsedTimer = null;
       let sessionStartTime = null;
+      let lastData = null; // store last render data for live timers
       const transcriptLogs = {}; // agentId -> [entries]
       let expandedAgentId = null;
 
@@ -778,6 +787,7 @@ export class DashboardPanel {
       }
 
       function render(state) {
+        lastData = state;
         const { session, agents, summary, lastUpdatedAt } = state;
 
         // Live badge
@@ -819,37 +829,102 @@ export class DashboardPanel {
         el.statPending.textContent = summary.pending + ' pending';
         el.statError.textContent = summary.error + ' error';
 
-        // Agent grid — running agents only
-        const runningAgents = agents.filter(a => a.status === 'running');
-        if (runningAgents.length === 0) {
+        // Agent grid — sub-agents only (main agent shown in header)
+        const subAgents = agents.filter(a => a.id !== 'main');
+        const runningAgents = subAgents.filter(a => a.status === 'running');
+        const doneAgents = subAgents.filter(a => a.status === 'done');
+        const errorAgents = subAgents.filter(a => a.status === 'error');
+        const pendingAgents = subAgents.filter(a => a.status === 'pending');
+        const allDisplayAgents = [...runningAgents, ...pendingAgents, ...errorAgents, ...doneAgents];
+
+        if (allDisplayAgents.length === 0) {
           el.agentGrid.innerHTML = '<div class="empty-state">'
             + '<div class="icon">&#x25C8;</div>'
-            + '<div class="title">No running agents</div>'
-            + '<div>Run <code>/cc</code> in Claude Code to start multi-agent execution</div>'
+            + '<div class="title">No sub-agents yet</div>'
+            + '<div>Use the Agent tool or run <code>/cc</code> to start multi-agent execution</div>'
             + '</div>';
         } else {
-          el.agentGrid.innerHTML = runningAgents.map(renderCard).join('');
+          el.agentGrid.innerHTML = allDisplayAgents.map(renderCard).join('');
         }
 
         // Last update
         el.lastUpdate.textContent = 'Last update: ' + formatTime(lastUpdatedAt);
+
+        // Start live card timers for running agents
+        if (summary.running > 0) {
+          startCardTimers();
+        }
       }
 
       function renderCard(agent, index) {
-        const dur = elapsedSince(agent.startedAt);
+        const isRunning = agent.status === 'running';
+        const isError = agent.status === 'error';
+        const isDone = agent.status === 'done';
+        const isPending = agent.status === 'pending';
+        const cardClass = isError ? 'agent-card error' : isRunning ? 'agent-card running' : isPending ? 'agent-card pending' : 'agent-card done';
+
+        const dur = isRunning
+          ? elapsedSince(agent.startedAt)
+          : agent.durationMs != null ? formatDuration(agent.durationMs) : '—';
+
+        const statusIcon = isRunning ? '<span class="spinner"></span>'
+          : isError ? '<span style="color:var(--error)">✗</span> '
+          : '<span style="color:var(--success, #4ade80)">✓</span> ';
+
         const logs = transcriptLogs[agent.id] || [];
         const logHtml = renderTranscriptLog(logs);
-        const waitingHtml = logs.length === 0
-          ? '<div style="color:var(--subtle);font-size:10px;opacity:0.6">◇ waiting for reasoning data...</div>'
+
+        // Description subtitle (always visible)
+        const descHtml = agent.description && agent.description !== agent.name
+          ? '<div style="color:var(--subtle);font-size:10px;opacity:0.7;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(agent.description) + '</div>'
           : '';
 
-        return '<div class="agent-card running" data-agent-id="' + escapeHtml(agent.id) + '">'
+        // Last activity indicator for running agents
+        const lastActivity = getLastActivity(agent.id);
+        const activityHtml = isRunning && lastActivity
+          ? '<span style="color:var(--pulse-green);font-size:9px;margin-left:6px" class="activity-ts" data-agent-id="' + escapeHtml(agent.id) + '">' + lastActivity + '</span>'
+          : '';
+
+        // Error context: show last 2 thinking entries before error
+        var errorHtml = '';
+        if (isError && agent.error) {
+          var contextHtml = '';
+          var contextEntries = (logs || []).filter(function(e) { return e.type !== 'tool_use'; }).slice(-2);
+          if (contextEntries.length > 0) {
+            contextHtml = contextEntries.map(function(e) {
+              return '<div style="color:var(--subtle);font-size:9px;opacity:0.6">▸ ' + escapeHtml(e.content.substring(0, 100)) + '</div>';
+            }).join('');
+          }
+          errorHtml = contextHtml
+            + '<div style="color:var(--error, #f87171);font-size:10px;margin-top:4px">⚠ ' + escapeHtml(agent.error) + '</div>';
+        }
+
+        // Tool call summary
+        var toolCount = (logs || []).filter(function(e) { return e.type === 'tool_use'; }).length;
+        var toolSummaryHtml = toolCount > 0
+          ? '<div style="color:var(--subtle);font-size:9px;opacity:0.5;margin-top:2px">⚙ ' + toolCount + ' tool calls</div>'
+          : '';
+
+        return '<div class="' + cardClass + '" data-agent-id="' + escapeHtml(agent.id) + '">'
           + '<div class="card-header">'
-          + '<span class="agent-name"><span class="spinner"></span>' + escapeHtml(agent.name) + '</span>'
-          + '<span style="color:var(--subtle);font-size:10px">' + dur + '</span>'
+          + '<span class="agent-name">' + statusIcon + escapeHtml(agent.name) + '</span>'
+          + '<span style="color:var(--subtle);font-size:10px">' + dur + activityHtml + '</span>'
           + '</div>'
-          + '<div class="transcript-log" id="log-' + escapeHtml(agent.id) + '">' + waitingHtml + logHtml + '</div>'
+          + descHtml
+          + errorHtml
+          + ((isRunning || logs.length > 0) ? '<div class="transcript-log" id="log-' + escapeHtml(agent.id) + '">' + logHtml + toolSummaryHtml + '</div>' : '')
           + '</div>';
+      }
+
+      // Track last activity time per agent
+      var agentLastActivity = {};
+      function getLastActivity(agentId) {
+        var ts = agentLastActivity[agentId];
+        if (!ts) return '';
+        var ago = Math.round((Date.now() - ts) / 1000);
+        if (ago <= 1) return 'active now';
+        if (ago < 60) return ago + 's ago';
+        return Math.floor(ago / 60) + 'm ago';
       }
 
       function iconFor(e) {
@@ -878,27 +953,55 @@ export class DashboardPanel {
         }
         transcriptLogs[entry.agentId].push(entry);
 
+        // Track last activity
+        agentLastActivity[entry.agentId] = Date.now();
+
         // Keep max 200 entries per agent
         if (transcriptLogs[entry.agentId].length > 200) {
           transcriptLogs[entry.agentId] = transcriptLogs[entry.agentId].slice(-150);
         }
 
-        // Live-append reasoning entries only (skip tool_use commands)
-        if (entry.type === 'tool_use') return;
+        // Tool calls: update summary count only (don't append to log)
+        if (entry.type === 'tool_use') {
+          var logEl = document.getElementById('log-' + entry.agentId);
+          if (logEl) {
+            var toolCount = (transcriptLogs[entry.agentId] || []).filter(function(e) { return e.type === 'tool_use'; }).length;
+            var existing = logEl.querySelector('.tool-summary');
+            if (existing) {
+              existing.textContent = '⚙ ' + toolCount + ' tool calls';
+            } else {
+              var summary = document.createElement('div');
+              summary.className = 'tool-summary';
+              summary.style.cssText = 'color:var(--subtle);font-size:9px;opacity:0.5;margin-top:2px';
+              summary.textContent = '⚙ ' + toolCount + ' tool calls';
+              logEl.appendChild(summary);
+            }
+          }
+          return;
+        }
 
-        const logEl = document.getElementById('log-' + entry.agentId);
+        var logEl = document.getElementById('log-' + entry.agentId);
         if (logEl) {
-          // Remove "waiting" placeholder on first entry
-          const waiting = logEl.querySelector('div[style]');
-          if (waiting) waiting.remove();
-
-          const icon = entry.type === 'thinking' ? '…' : '▸';
-          const div = document.createElement('div');
+          var icon = entry.type === 'thinking' ? '…' : '▸';
+          var div = document.createElement('div');
           div.className = 'log-entry role-' + entry.role + ' type-' + entry.type;
           div.innerHTML = '<span class="log-icon">' + icon + '</span>'
             + '<span class="log-content">' + escapeHtml(entry.content) + '</span>';
-          logEl.appendChild(div);
+
+          // Insert before tool summary if it exists
+          var toolSummary = logEl.querySelector('.tool-summary');
+          if (toolSummary) {
+            logEl.insertBefore(div, toolSummary);
+          } else {
+            logEl.appendChild(div);
+          }
           logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Update activity timestamp display
+        var activityEl = document.querySelector('.activity-ts[data-agent-id="' + entry.agentId + '"]');
+        if (activityEl) {
+          activityEl.textContent = 'active now';
         }
       }
 
@@ -915,6 +1018,30 @@ export class DashboardPanel {
         } else {
           hint.textContent = isExpanded ? '▲ collapse' : '▼ ' + logs.length + ' entries';
         }
+      }
+
+      // Live card timers — update running agent durations every second
+      let cardTimerInterval = null;
+      function startCardTimers() {
+        if (cardTimerInterval) return;
+        cardTimerInterval = setInterval(() => {
+          document.querySelectorAll('.agent-card.running').forEach(card => {
+            const agentId = card.getAttribute('data-agent-id');
+            const timeSpan = card.querySelector('.card-header > span:last-child');
+            if (timeSpan && agentId) {
+              // Find the agent's startedAt from current data
+              const agent = (lastData?.agents || []).find(a => a.id === agentId);
+              if (agent && agent.startedAt) {
+                timeSpan.textContent = elapsedSince(agent.startedAt);
+              }
+            }
+          });
+          // Stop if no running cards
+          if (document.querySelectorAll('.agent-card.running').length === 0 && cardTimerInterval) {
+            clearInterval(cardTimerInterval);
+            cardTimerInterval = null;
+          }
+        }, 1000);
       }
 
       // (click handler is defined above in the unified listener)

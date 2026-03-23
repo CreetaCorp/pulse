@@ -51,7 +51,11 @@ export class AgentWatcher implements vscode.Disposable {
     this.pollTimer = setInterval(() => this.readAndEmit(), interval);
   }
 
+  private isReading = false;
+
   private readAndEmit(): void {
+    if (this.isReading) { return; }
+    this.isReading = true;
     try {
       if (!fs.existsSync(this.filePath)) {
         return;
@@ -68,6 +72,8 @@ export class AgentWatcher implements vscode.Disposable {
       }
     } catch {
       // File being written to or corrupted; skip this cycle
+    } finally {
+      this.isReading = false;
     }
   }
 

@@ -5,140 +5,199 @@ import * as os from 'os';
 
 /**
  * Reads agent transcript .jsonl files to show real-time thinking process.
- * Claude Code stores subagent conversations at:
- *   ~/.claude/projects/{project-hash}/{session-id}/subagents/agent-a{hex}.jsonl
  *
- * Matching strategy:
- *   - Use session_id from dashboard to find the correct session directory
- *   - Match subagent file by prompt prefix (first line of file = user message with prompt)
+ * Claude Code stores subagent conversations at:
+ *   ~/.claude/projects/{project-hash}/{session-uuid}/subagents/agent-{claudeAgentId}.jsonl
+ *
+ * Problem: Pulse's agentId (e.g. agent_mn32y78n_1368) != Claude's agentId (e.g. acfc3c5fb2c806aaa)
+ *
+ * Solution: Watch the subagents/ directory directly. When a new .jsonl file appears,
+ * match it to the most recently registered Pulse agent by creation time.
  */
 export class TranscriptReader implements vscode.Disposable {
-  private watchers = new Map<string, fs.FSWatcher>();
+  private readonly log = vscode.window.createOutputChannel('Pulse Transcript');
+  private readonly debugLogPath: string;
+
+  // File-level watchers: filePath → FSWatcher
+  private fileWatchers = new Map<string, fs.FSWatcher>();
+
+  // Directory-level watcher for new subagent files
+  private dirWatcher: fs.FSWatcher | undefined;
+  private dirPollTimer: ReturnType<typeof setInterval> | undefined;
+
+  // pulseAgentId → filePath (matched transcript file)
+  private agentFileMap = new Map<string, string>();
+
+  // filePath → pulseAgentId (reverse map)
+  private fileAgentMap = new Map<string, string>();
+
+  // Read positions: filePath → bytes read
   private readPositions = new Map<string, number>();
-  private pendingAgents = new Map<string, { sessionId: string; promptPrefix: string }>();
-  private pendingPollTimer: ReturnType<typeof setInterval> | undefined;
+
+  // Timestamp when we started watching — only match files modified after this
+  private watchStartTime = 0;
+
+  // Queue of Pulse agentIds waiting for a transcript file match
+  private unmatchedAgents: { id: string; registeredAt: number }[] = [];
 
   private readonly _onNewEntry = new vscode.EventEmitter<TranscriptEntry>();
   readonly onNewEntry = this._onNewEntry.event;
 
   private readonly claudeProjectsDir: string;
+  private activeSubagentsDir: string | undefined;
 
   constructor() {
     const claudeHome = process.env.CLAUDE_HOME || path.join(os.homedir(), '.claude');
     this.claudeProjectsDir = path.join(claudeHome, 'projects');
+    // Debug log file — use workspace .pulse/ if available, fallback to temp
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const wsRoot = workspaceFolders?.[0]?.uri.fsPath || os.tmpdir();
+    this.debugLogPath = path.join(wsRoot, '.pulse', 'transcript-debug.log');
+    this.debugLog('=== TranscriptReader initialized ===');
+  }
+
+  private debugLog(msg: string): void {
+    const line = `[${new Date().toISOString()}] ${msg}`;
+    this.log.appendLine(line);
+    try { fs.appendFileSync(this.debugLogPath, line + '\n'); } catch { /* ignore */ }
   }
 
   /**
-   * Start watching for a specific agent's transcript.
-   * Uses session_id + prompt prefix to locate the correct subagent file.
+   * Register a Pulse agent for transcript tracking.
+   * Does NOT match by agentId — instead queues the agent for time-based matching.
    */
-  watchAgent(agentId: string, sessionId: string, promptPrefix: string): void {
-    if (this.watchers.has(agentId)) {
-      return; // Already watching
+  watchAgent(agentId: string, _sessionId: string, _promptPrefix: string): void {
+    this.debugLog(`[watchAgent] called: agentId=${agentId}`);
+    if (agentId === 'main' || this.agentFileMap.has(agentId)) {
+      this.debugLog(`[watchAgent] skipped (main or already mapped)`);
+      return;
     }
 
-    const transcriptPath = this.findTranscriptFile(sessionId, promptPrefix);
-    if (transcriptPath) {
-      this.initWatcher(agentId, transcriptPath);
+    // Queue this agent for matching
+    this.unmatchedAgents.push({ id: agentId, registeredAt: Date.now() });
+    this.debugLog(`[watchAgent] queued, unmatchedAgents=${this.unmatchedAgents.length}`);
+
+    // Ensure we're watching the subagents/ directory
+    this.ensureDirWatcher();
+
+    // Try immediate match with any unmatched files
+    this.matchNewFiles();
+  }
+
+  /**
+   * Find and start watching the most recent subagents/ directory.
+   */
+  private ensureDirWatcher(): void {
+    // Set watchStartTime on first call
+    if (!this.watchStartTime) {
+      this.watchStartTime = Date.now() - 60000; // 60s lookback
+      this.debugLog(`[ensureDirWatcher] watchStartTime=${new Date(this.watchStartTime).toISOString()}`);
+    }
+
+    // Already polling — skip
+    if (this.dirPollTimer) {
+      return;
+    }
+
+    this.debugLog(`[ensureDirWatcher] claudeProjectsDir=${this.claudeProjectsDir}`);
+
+    // Single unified poll: find dir if needed, then match files
+    this.dirPollTimer = setInterval(() => {
+      // Find subagents dir if not yet found
+      if (!this.activeSubagentsDir) {
+        const dir = this.findActiveSubagentsDir();
+        if (dir) {
+          this.debugLog(`[poll] found subagentsDir=${dir}`);
+          this.activeSubagentsDir = dir;
+        } else {
+          return; // Keep polling until found
+        }
+      }
+
+      // Match new files
+      this.matchNewFiles();
+    }, 300);
+
+    // Stop after 5 minutes
+    setTimeout(() => this.stopDirPolling(), 300000);
+
+    // Also try immediately
+    const dir = this.findActiveSubagentsDir();
+    if (dir) {
+      this.activeSubagentsDir = dir;
+      this.debugLog(`[ensureDirWatcher] foundSubagentsDir=${dir}`);
+      this.matchNewFiles();
     } else {
-      // File not yet created — retry every second
-      this.pendingAgents.set(agentId, { sessionId, promptPrefix });
-      this.startPendingPoll();
+      this.debugLog(`[ensureDirWatcher] no dir yet, polling...`);
     }
   }
 
-  private initWatcher(agentId: string, transcriptPath: string): void {
+  /**
+   * Check for new .jsonl files and match them to unmatched Pulse agents.
+   */
+  private matchNewFiles(): void {
+    if (!this.activeSubagentsDir || this.unmatchedAgents.length === 0) {
+      return;
+    }
+    this.debugLog(`[matchNewFiles] dir=${this.activeSubagentsDir}, unmatched=${this.unmatchedAgents.length}, matched=${this.fileAgentMap.size}`);
+
+    try {
+      const files = fs.readdirSync(this.activeSubagentsDir)
+        .filter(f => f.startsWith('agent-') && f.endsWith('.jsonl') && !f.includes('compact'))
+        .map(f => {
+          const fullPath = path.join(this.activeSubagentsDir!, f);
+          return { name: f, path: fullPath, mtime: fs.statSync(fullPath).mtimeMs };
+        })
+        .filter(f => !this.fileAgentMap.has(f.path)) // not already matched
+        .filter(f => f.mtime >= this.watchStartTime) // only files modified after we started watching
+        .sort((a, b) => a.mtime - b.mtime); // oldest first (FIFO matching with agents)
+
+      this.debugLog(`[matchNewFiles] candidates=${files.length}, watchStartTime=${new Date(this.watchStartTime).toISOString()}`);
+
+      for (const file of files) {
+        if (this.unmatchedAgents.length === 0) { break; }
+
+        // Match to the oldest unmatched Pulse agent (FIFO)
+        const agent = this.unmatchedAgents.shift()!;
+        this.agentFileMap.set(agent.id, file.path);
+        this.fileAgentMap.set(file.path, agent.id);
+
+        this.debugLog(`[matchNewFiles] MATCHED: ${agent.id} → ${file.name} (mtime=${new Date(file.mtime).toISOString()})`);
+
+        // Start streaming this file
+        this.startFileWatcher(agent.id, file.path);
+      }
+
+      // Keep polling — new agents may arrive later
+    } catch (err: any) {
+      this.debugLog(`[matchNewFiles] ERROR: ${err?.message}`);
+    }
+  }
+
+  /**
+   * Start watching a specific transcript file and stream entries.
+   */
+  private startFileWatcher(agentId: string, filePath: string): void {
     // Initial read
-    this.readNewLines(agentId, transcriptPath);
+    this.readNewLines(agentId, filePath);
 
     // Watch for changes
     try {
-      const watcher = fs.watch(transcriptPath, () => {
-        this.readNewLines(agentId, transcriptPath);
+      const watcher = fs.watch(filePath, () => {
+        this.readNewLines(agentId, filePath);
       });
-      this.watchers.set(agentId, watcher);
+      this.fileWatchers.set(filePath, watcher);
     } catch {
-      // fs.watch failed — fall back to the pending poll to keep reading
-      this.watchers.set(agentId, { close: () => {} } as any);
+      // fs.watch failed — use polling fallback
+      const pollTimer = setInterval(() => {
+        this.readNewLines(agentId, filePath);
+      }, 500);
+      this.fileWatchers.set(filePath, { close: () => clearInterval(pollTimer) } as any);
     }
-  }
-
-  private startPendingPoll(): void {
-    if (this.pendingPollTimer) {
-      return;
-    }
-    this.pendingPollTimer = setInterval(() => {
-      for (const [agentId, { sessionId, promptPrefix }] of this.pendingAgents) {
-        const transcriptPath = this.findTranscriptFile(sessionId, promptPrefix);
-        if (transcriptPath) {
-          this.pendingAgents.delete(agentId);
-          this.initWatcher(agentId, transcriptPath);
-        }
-      }
-      if (this.pendingAgents.size === 0 && this.pendingPollTimer) {
-        clearInterval(this.pendingPollTimer);
-        this.pendingPollTimer = undefined;
-      }
-    }, 1000);
   }
 
   /**
-   * Find the transcript .jsonl file for an agent.
-   * Searches claudeProjectsDir/{sessionId}/subagents/ for a file whose
-   * first-line prompt matches promptPrefix.
-   */
-  private findTranscriptFile(sessionId: string, promptPrefix: string): string | undefined {
-    if (!sessionId) {
-      return undefined;
-    }
-
-    try {
-      if (!fs.existsSync(this.claudeProjectsDir)) {
-        return undefined;
-      }
-
-      const matchPrefix = promptPrefix.substring(0, 80);
-
-      // Search through project directories
-      const projects = fs.readdirSync(this.claudeProjectsDir);
-      for (const project of projects) {
-        const sessionDir = path.join(this.claudeProjectsDir, project, sessionId);
-        const subagentsDir = path.join(sessionDir, 'subagents');
-
-        if (!fs.existsSync(subagentsDir)) {
-          continue;
-        }
-
-        const files = fs.readdirSync(subagentsDir).filter(
-          f => f.startsWith('agent-') && f.endsWith('.jsonl') && !f.includes('compact')
-        );
-
-        for (const file of files) {
-          const filePath = path.join(subagentsDir, file);
-          try {
-            const firstLine = readFirstLine(filePath);
-            if (!firstLine) {
-              continue;
-            }
-            const entry = JSON.parse(firstLine);
-            const content: unknown = entry?.message?.content;
-            if (typeof content === 'string' && content.startsWith(matchPrefix)) {
-              return filePath;
-            }
-          } catch {
-            continue;
-          }
-        }
-      }
-    } catch {
-      // Search failed
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Read new lines from a transcript file since last read position.
+   * Read new lines from a transcript file since last position.
    */
   private readNewLines(agentId: string, filePath: string): void {
     try {
@@ -156,22 +215,21 @@ export class TranscriptReader implements vscode.Disposable {
 
       this.readPositions.set(filePath, stat.size);
 
-      const newContent = buffer.toString('utf-8');
-      const lines = newContent.split('\n').filter(Boolean);
+      const lines = buffer.toString('utf-8').split('\n').filter(Boolean);
+      this.debugLog(`[readNewLines] ${agentId}: ${lines.length} new lines from pos ${lastPos}`);
 
       for (const line of lines) {
         try {
           const entry = JSON.parse(line);
           const parsed = this.parseEntry(agentId, entry);
           if (parsed) {
+            this.debugLog(`[readNewLines] FIRE: ${agentId} type=${parsed.type} content=${parsed.content.substring(0, 60)}`);
             this._onNewEntry.fire(parsed);
           }
-        } catch {
-          // Skip invalid lines
-        }
+        } catch { /* skip invalid lines */ }
       }
-    } catch {
-      // File access error
+    } catch (err: any) {
+      this.debugLog(`[readNewLines] ERROR: ${err?.message}`);
     }
   }
 
@@ -186,35 +244,10 @@ export class TranscriptReader implements vscode.Disposable {
     const msg = raw.message;
     const role = msg.role || raw.type;
 
-    if (role === 'user') {
-      // Skip the first user message (it's the prompt we already know)
-      if (raw.parentUuid === null && raw.isSidechain === true) {
-        return null;
-      }
-      const text = typeof msg.content === 'string'
-        ? msg.content
-        : Array.isArray(msg.content)
-          ? msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
-          : '';
-      if (!text) {
-        return null;
-      }
-      return {
-        agentId,
-        role: 'user',
-        type: 'text',
-        content: text.substring(0, 500),
-        timestamp: new Date().toISOString(),
-      };
-    }
-
     if (role === 'assistant') {
       const content = msg.content;
-      if (!Array.isArray(content)) {
-        return null;
-      }
+      if (!Array.isArray(content)) { return null; }
 
-      // Extract first meaningful block
       for (const block of content) {
         if (block.type === 'thinking' && block.thinking) {
           return {
@@ -222,27 +255,25 @@ export class TranscriptReader implements vscode.Disposable {
             role: 'assistant',
             type: 'thinking',
             content: block.thinking.substring(0, 300),
-            timestamp: new Date().toISOString(),
+            timestamp: raw.timestamp || new Date().toISOString(),
           };
         }
-
         if (block.type === 'text' && block.text) {
           return {
             agentId,
             role: 'assistant',
             type: 'text',
             content: block.text.substring(0, 500),
-            timestamp: new Date().toISOString(),
+            timestamp: raw.timestamp || new Date().toISOString(),
           };
         }
-
         if (block.type === 'tool_use') {
           return {
             agentId,
             role: 'assistant',
             type: 'tool_use',
             content: `${block.name}: ${summarizeToolInput(block.name, block.input)}`,
-            timestamp: new Date().toISOString(),
+            timestamp: raw.timestamp || new Date().toISOString(),
           };
         }
       }
@@ -251,15 +282,56 @@ export class TranscriptReader implements vscode.Disposable {
     return null;
   }
 
+  /**
+   * Find the most recently modified subagents/ directory.
+   */
+  private findActiveSubagentsDir(): string | undefined {
+    try {
+      if (!fs.existsSync(this.claudeProjectsDir)) { return undefined; }
+
+      const dirs: { path: string; mtime: number }[] = [];
+
+      const projects = fs.readdirSync(this.claudeProjectsDir);
+      for (const project of projects) {
+        const projectDir = path.join(this.claudeProjectsDir, project);
+        try {
+          const entries = fs.readdirSync(projectDir, { withFileTypes: true });
+          for (const entry of entries) {
+            // Skip files (e.g. .jsonl) — only process directories
+            if (!entry.isDirectory()) { continue; }
+            if (entry.name === 'memory') { continue; }
+            const fullPath = path.join(projectDir, entry.name);
+            try {
+              const subDir = path.join(fullPath, 'subagents');
+              if (fs.existsSync(subDir)) {
+                const stat = fs.statSync(subDir);
+                dirs.push({ path: subDir, mtime: stat.mtimeMs });
+              }
+            } catch { continue; }
+          }
+        } catch { continue; }
+      }
+
+      if (dirs.length === 0) { return undefined; }
+
+      dirs.sort((a, b) => b.mtime - a.mtime);
+      return dirs[0].path;
+    } catch { return undefined; }
+  }
+
+  private stopDirPolling(): void {
+    if (this.dirPollTimer) {
+      clearInterval(this.dirPollTimer);
+      this.dirPollTimer = undefined;
+    }
+  }
+
   dispose(): void {
-    for (const watcher of this.watchers.values()) {
+    for (const watcher of this.fileWatchers.values()) {
       watcher.close();
     }
-    this.watchers.clear();
-    if (this.pendingPollTimer) {
-      clearInterval(this.pendingPollTimer);
-      this.pendingPollTimer = undefined;
-    }
+    this.fileWatchers.clear();
+    this.stopDirPolling();
     this._onNewEntry.dispose();
   }
 }
@@ -272,25 +344,8 @@ export interface TranscriptEntry {
   timestamp: string;
 }
 
-/** Read only the first line of a file efficiently. */
-function readFirstLine(filePath: string): string | undefined {
-  try {
-    const fd = fs.openSync(filePath, 'r');
-    const buf = Buffer.alloc(2048);
-    const bytesRead = fs.readSync(fd, buf, 0, 2048, 0);
-    fs.closeSync(fd);
-    const text = buf.subarray(0, bytesRead).toString('utf-8');
-    const newline = text.indexOf('\n');
-    return newline >= 0 ? text.substring(0, newline) : text;
-  } catch {
-    return undefined;
-  }
-}
-
 function summarizeToolInput(toolName: string, input: any): string {
-  if (!input) {
-    return '';
-  }
+  if (!input) { return ''; }
   switch (toolName) {
     case 'Read': return input.file_path || '';
     case 'Write': return input.file_path || '';

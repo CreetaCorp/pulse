@@ -13,6 +13,8 @@ const watchers = new Map<string, AgentWatcher>();
 const projectStates = new Map<string, DashboardState>();
 const previousRunningCount = new Map<string, number>(); // for 0→N transition detection
 
+const fallbackTimers: ReturnType<typeof setInterval>[] = [];
+
 let statusBar: StatusBarManager | undefined;
 let treeProvider: AgentTreeProvider | undefined;
 let transcriptReader: TranscriptReader | undefined;
@@ -155,6 +157,8 @@ function startFallbackWatcher(folder: vscode.WorkspaceFolder, pulseDir: string, 
   const checkInterval = setInterval(() => {
     if (fs.existsSync(path.join(pulseDir, 'agent-dashboard.json'))) {
       clearInterval(checkInterval);
+      const idx = fallbackTimers.indexOf(checkInterval);
+      if (idx >= 0) { fallbackTimers.splice(idx, 1); }
       // Switch to .pulse/ watcher
       const existing = watchers.get(folder.name);
       if (existing) {
@@ -164,6 +168,7 @@ function startFallbackWatcher(folder: vscode.WorkspaceFolder, pulseDir: string, 
       output.appendLine(`[Pulse] Switched to .pulse/ for: ${folder.name}`);
     }
   }, 2000);
+  fallbackTimers.push(checkInterval);
   // Stop checking after 5 minutes
   setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000);
 }
@@ -210,9 +215,10 @@ function handleStateUpdate(projectName: string, rawState: DashboardState): void 
   // Update status bar with aggregated totals across all projects
   statusBar?.update(buildAggregateState());
 
-  // Start watching transcripts for running agents
-  const runningAgents = state.agents.filter(a => a.status === 'running');
-  for (const agent of runningAgents) {
+  // Start watching transcripts for ALL sub-agents (not just running)
+  // Agents may complete before polling detects them, so watch done/error too
+  const subAgents = state.agents.filter(a => a.id !== 'main');
+  for (const agent of subAgents) {
     transcriptReader?.watchAgent(agent.id, state.session.id, agent.description);
   }
 
@@ -306,5 +312,9 @@ export function deactivate(): void {
     watcher.dispose();
   }
   watchers.clear();
+  for (const timer of fallbackTimers) {
+    clearInterval(timer);
+  }
+  fallbackTimers.length = 0;
   transcriptReader?.dispose();
 }
