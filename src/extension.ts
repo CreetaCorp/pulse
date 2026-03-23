@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { AgentWatcher } from './AgentWatcher';
 import { DashboardPanel } from './DashboardPanel';
 import { AgentTreeProvider } from './AgentTreeProvider';
@@ -85,6 +86,36 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(outputChannel);
   outputChannel.appendLine('[Pulse] Extension activated.');
+
+  // Check if Claude Code plugin is likely installed (look for .pulse/ or .lens/ in any folder)
+  checkPluginInstalled(outputChannel);
+}
+
+/** Show a one-time hint if no dashboard data is found after a delay */
+function checkPluginInstalled(output: vscode.OutputChannel): void {
+  setTimeout(() => {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const hasData = folders.some(f => {
+      const pulseFile = path.join(f.uri.fsPath, '.pulse', 'agent-dashboard.json');
+      const lensFile = path.join(f.uri.fsPath, '.lens', 'agent-dashboard.json');
+      return fs.existsSync(pulseFile) || fs.existsSync(lensFile);
+    });
+
+    if (!hasData && folders.length > 0) {
+      vscode.window.showInformationMessage(
+        'Pulse: No agent data detected. Install the Claude Code plugin for real-time tracking.',
+        'How to Install',
+        'Dismiss'
+      ).then(selection => {
+        if (selection === 'How to Install') {
+          vscode.env.openExternal(
+            vscode.Uri.parse('https://github.com/CreetaCorp/pulse#setup')
+          );
+        }
+      });
+      output.appendLine('[Pulse] No dashboard data found. Plugin install hint shown.');
+    }
+  }, 10000); // Check 10 seconds after activation
 }
 
 /** Sync watchers to match current workspace folders */
@@ -103,13 +134,38 @@ function syncWatchers(output: vscode.OutputChannel): void {
     }
   }
 
-  // Add watchers for new folders
+  // Add watchers for new folders (.pulse/ preferred, .lens/ fallback)
   for (const folder of folders) {
     if (!watchers.has(folder.name)) {
-      const dashboardDir = path.join(folder.uri.fsPath, '.lens');
+      const pulseDir = path.join(folder.uri.fsPath, '.pulse');
+      const lensDir = path.join(folder.uri.fsPath, '.lens');
+      const dashboardDir = fs.existsSync(pulseDir) ? pulseDir : lensDir;
       startWatcher(folder.name, dashboardDir, output);
+
+      // Also watch .pulse/ if we started with .lens/ (in case pulse plugin starts later)
+      if (dashboardDir === lensDir) {
+        startFallbackWatcher(folder, pulseDir, output);
+      }
     }
   }
+}
+
+/** Watch for .pulse/ directory creation when we initially fell back to .lens/ */
+function startFallbackWatcher(folder: vscode.WorkspaceFolder, pulseDir: string, output: vscode.OutputChannel): void {
+  const checkInterval = setInterval(() => {
+    if (fs.existsSync(path.join(pulseDir, 'agent-dashboard.json'))) {
+      clearInterval(checkInterval);
+      // Switch to .pulse/ watcher
+      const existing = watchers.get(folder.name);
+      if (existing) {
+        existing.dispose();
+      }
+      startWatcher(folder.name, pulseDir, output);
+      output.appendLine(`[Pulse] Switched to .pulse/ for: ${folder.name}`);
+    }
+  }, 2000);
+  // Stop checking after 5 minutes
+  setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000);
 }
 
 function startWatcher(projectName: string, dashboardDir: string, output: vscode.OutputChannel): void {

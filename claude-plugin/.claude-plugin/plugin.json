@@ -1,0 +1,20 @@
+{
+  "name": "pulse-agent-tracker",
+  "version": "0.5.0",
+  "description": "Agent lifecycle tracker for Pulse Dashboard. Tracks Claude Code sessions, sub-agent execution, and tool usage in real-time.",
+  "author": {
+    "name": "CreetaCorp",
+    "url": "https://github.com/CreetaCorp/pulse"
+  },
+  "homepage": "https://github.com/CreetaCorp/pulse",
+  "repository": "https://github.com/CreetaCorp/pulse",
+  "license": "MIT",
+  "hooks": "./hooks/hooks.json",
+  "keywords": [
+    "pulse",
+    "agent-tracker",
+    "dashboard",
+    "monitoring",
+    "claude-code"
+  ]
+}

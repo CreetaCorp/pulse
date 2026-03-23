@@ -23,6 +23,7 @@ export interface AgentEntry {
   id: string;
   name: string;
   description: string;
+  parentId?: string | null;
   status: 'pending' | 'running' | 'done' | 'error';
   startedAt: string;
   endedAt: string | null;

@@ -3,7 +3,7 @@
   "displayName": "Pulse — Real-time Agent Dashboard",
   "description": "Real-time multi-agent dashboard for Claude Code. Visualize parallel agent execution, live thinking process, and tool calls from the lens plugin.",
   "icon": "media/icon.png",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "publisher": "CreetaCorp",
   "license": "MIT",
   "repository": {
@@ -100,7 +100,7 @@
         "pulse.theme": {
           "type": "string",
           "default": "cyberpunk",
-          "enum": ["cyberpunk", "minimal", "terminal"],
+          "enum": ["cyberpunk"],
           "description": "Dashboard visual theme."
         }
       }
