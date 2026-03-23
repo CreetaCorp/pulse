@@ -1,0 +1,35 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "CreetaCorp-pulse",
+  "description": "Pulse — Real-time agent monitoring for Claude Code",
+  "owner": {
+    "name": "CreetaCorp",
+    "url": "https://github.com/CreetaCorp"
+  },
+  "metadata": {
+    "description": "Pulse agent tracker plugin marketplace",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "pulse-agent-tracker",
+      "description": "Real-time agent lifecycle tracker for Pulse Dashboard. Tracks sessions, sub-agents, and tool usage.",
+      "version": "0.5.0",
+      "author": {
+        "name": "CreetaCorp"
+      },
+      "homepage": "https://github.com/CreetaCorp/pulse",
+      "repository": "https://github.com/CreetaCorp/pulse",
+      "source": {
+        "source": "github",
+        "repo": "CreetaCorp/pulse",
+        "ref": "v0.5.0",
+        "path": "claude-plugin"
+      },
+      "license": "MIT",
+      "category": "monitoring",
+      "tags": ["agent-tracker", "dashboard", "monitoring"],
+      "keywords": ["pulse", "agent-tracker", "dashboard", "monitoring", "claude-code"]
+    }
+  ]
+}
