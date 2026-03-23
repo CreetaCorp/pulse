@@ -8,7 +8,7 @@
 
 const path = require('path');
 
-const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..');
+const PLUGIN_ROOT = path.resolve(__dirname, '..');
 const { initSession, getDashboardPath } = require(path.join(PLUGIN_ROOT, 'lib', 'agent-tracker'));
 
 function main() {

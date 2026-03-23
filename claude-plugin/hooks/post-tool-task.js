@@ -9,7 +9,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..');
+const PLUGIN_ROOT = path.resolve(__dirname, '..');
 const { completeAgent, loadDashboard } = require(path.join(PLUGIN_ROOT, 'lib', 'agent-tracker'));
 
 function main() {
